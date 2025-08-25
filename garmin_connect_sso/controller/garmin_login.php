@@ -29,35 +29,26 @@ class garmin_login
         $this->php_ext = $php_ext;
     }
 
-    /**
-     * Initiates the Garmin OAuth 2.0 PKCE flow.
-     */
     public function login()
     {
         if (empty($this->config['garmin_sso_enabled'])) {
             trigger_error('GARMIN_SSO_DISABLED');
         }
-
         if (empty($this->config['garmin_sso_client_id'])) {
             trigger_error('GARMIN_SSO_CLIENT_ID_NOT_CONFIGURED');
         }
-
         if ($this->user->data['is_registered']) {
             redirect($this->helper->route('phpbb_index'));
         }
 
-        // 1. Generate and store code_verifier
         $code_verifier = $this->generate_random_string(64);
         $this->user->session->set('garmin_sso_code_verifier', $code_verifier);
 
-        // 2. Generate code_challenge
         $code_challenge = $this->base64url_encode(hash('sha256', $code_verifier, true));
 
-        // 3. Generate and store state
         $state = $this->generate_random_string(32);
         $this->user->session->set('garmin_sso_state', $state);
 
-        // 4. Construct the authorization URL
         $params = [
             'response_type'         => 'code',
             'client_id'             => $this->config['garmin_sso_client_id'],
@@ -66,33 +57,77 @@ class garmin_login
             'redirect_uri'          => $this->helper->route('utagawavtt_garmin_connect_sso_callback', [], true),
             'state'                 => $state,
         ];
-
         $auth_url = 'https://connect.garmin.com/oauth2Confirm?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
-
-        // 5. Redirect user to Garmin
         redirect($auth_url);
     }
 
-    /**
-     * Handles the callback from Garmin after user authorization.
-     */
     public function handle_callback()
     {
-        // This will be implemented in the next step.
-        trigger_error('Callback not yet implemented.');
+        $code = $this->request->variable('code', '');
+        $state = $this->request->variable('state', '');
+        $session_state = $this->user->session->get('garmin_sso_state');
+        $code_verifier = $this->user->session->get('garmin_sso_code_verifier');
+
+        $this->user->session->delete('garmin_sso_state');
+        $this->user->session->delete('garmin_sso_code_verifier');
+
+        if (empty($code) || empty($state) || empty($session_state) || $state !== $session_state) {
+            trigger_error('GARMIN_SSO_INVALID_STATE');
+        }
+        if (empty($code_verifier)) {
+            trigger_error('GARMIN_SSO_INVALID_VERIFIER');
+        }
+
+        $token_url = 'https://diauth.garmin.com/di-oauth2-service/oauth/token';
+        $redirect_uri = $this->helper->route('utagawavtt_garmin_connect_sso_callback', [], true);
+
+        $post_data = http_build_query([
+            'grant_type'    => 'authorization_code',
+            'code'          => $code,
+            'redirect_uri'  => $redirect_uri,
+            'client_id'     => $this->config['garmin_sso_client_id'],
+            'client_secret' => $this->config['garmin_sso_client_secret'],
+            'code_verifier' => $code_verifier,
+        ]);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $token_url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($response === false || $http_code !== 200) {
+            trigger_error('GARMIN_SSO_TOKEN_ERROR: ' . $response);
+        }
+
+        $token_data = json_decode($response, true);
+
+        if (empty($token_data['access_token'])) {
+            trigger_error('GARMIN_SSO_TOKEN_INVALID: ' . $response);
+        }
+
+        // The rest of the logic (user lookup, creation, login) will be in the next step.
+        // For now, we pass the tokens to the next function.
+        return $this->fetch_user_and_login($token_data);
     }
 
-    /**
-     * Generates a cryptographically secure random string.
-     */
+    public function fetch_user_and_login($token_data)
+    {
+        // This will be implemented in the next step.
+        echo "Token received successfully! User login logic will be here.";
+        exit;
+    }
+
     private function generate_random_string($length)
     {
         return substr(str_replace(['+', '/', '='], '', base64_encode(random_bytes($length))), 0, $length);
     }
 
-    /**
-     * Base64-URL encodes data.
-     */
     private function base64url_encode($data)
     {
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
