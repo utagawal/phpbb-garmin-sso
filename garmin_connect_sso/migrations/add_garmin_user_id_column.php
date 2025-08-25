@@ -5,7 +5,8 @@ class add_garmin_user_id_column extends \phpbb\db\migration\migration
 {
     public function effectively_installed()
     {
-        return $this->db_tools->column_exists($this->table_prefix . 'users', 'user_garmin_id');
+        $table_columns = $this->db_tools->get_table_columns($this->table_prefix . 'users');
+        return isset($table_columns['user_garmin_id']);
     }
 
     static public function depends_on()

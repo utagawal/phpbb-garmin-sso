@@ -5,7 +5,8 @@ class add_garmin_token_columns extends \phpbb\db\migration\migration
 {
     public function effectively_installed()
     {
-        return $this->db_tools->column_exists($this->table_prefix . 'users', 'user_garmin_access_token');
+        $table_columns = $this->db_tools->get_table_columns($this->table_prefix . 'users');
+        return isset($table_columns['user_garmin_access_token']);
     }
 
     static public function depends_on()
