@@ -1,0 +1,146 @@
+<!-- IF S_GARMIN_SSO_ENABLED and not S_USER_LOGGED_IN -->
+<script>
+// Injection du bouton Garmin Connect
+if (window.location.href.indexOf('mode=login') > -1 && !document.querySelector('.garmin-connect-btn')) {
+    setTimeout(function() {
+        console.log('🔍 Ajout du bouton Garmin Connect...');
+        
+        var targetContainer = null;
+        
+        // Chercher les boutons sociaux existants (Facebook, Google, Twitter)
+        var socialButtons = document.querySelectorAll('a[href*="facebook"], a[href*="google"], a[href*="twitter"]');
+        
+        if (socialButtons.length > 0) {
+            // Ajouter à côté des boutons sociaux
+            targetContainer = socialButtons[0].parentNode;
+            console.log('✅ Conteneur trouvé via boutons sociaux');
+        } else {
+            // Sinon, ajouter après le formulaire de connexion
+            var loginForm = document.querySelector('form[method="post"]');
+            if (loginForm) {
+                targetContainer = loginForm.parentNode;
+                console.log('✅ Conteneur trouvé via formulaire');
+            }
+        }
+        
+        if (targetContainer) {
+            // Construire l'URL Garmin (utilise la variable template si disponible)
+            var garminUrl = '/forum_v3/ucp.php?i=\\utagawavtt\\garmin_connect_sso\\ucp\\main_module&mode=garmin_login';
+            
+            // Créer le bouton Garmin
+            var garminHTML = `
+                <div style="text-align: center; margin: 20px 0; padding: 15px 0; border-top: 1px solid #ddd;">
+                    <p style="color: #666; margin-bottom: 15px; font-size: 14px;">
+                        Ou connectez-vous avec
+                    </p>
+                    <a href="${garminUrl}" class="garmin-connect-btn" style="
+                        background: linear-gradient(135deg, #007CC3 0%, #005A8C 100%);
+                        color: white;
+                        padding: 12px 24px;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        font-weight: 600;
+                        font-size: 14px;
+                        box-shadow: 0 2px 4px rgba(0, 124, 195, 0.2);
+                        transition: all 0.3s ease;
+                        min-width: 200px;
+                        justify-content: center;
+                    ">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white" style="margin-right: 8px;">
+                            <circle cx="12" cy="7" r="1.5"/>
+                            <circle cx="7" cy="12" r="1.5"/>
+                            <circle cx="17" cy="12" r="1.5"/>
+                            <circle cx="12" cy="17" r="1.5"/>
+                            <circle cx="12" cy="12" r="2"/>
+                        </svg>
+                        Garmin Connect
+                    </a>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        Connectez-vous avec votre compte Garmin existant
+                    </p>
+                </div>
+            `;
+            
+            // Insérer le bouton
+            targetContainer.insertAdjacentHTML('afterend', garminHTML);
+            
+            // Ajouter les effets hover
+            var garminBtn = document.querySelector('.garmin-connect-btn');
+            if (garminBtn) {
+                garminBtn.addEventListener('mouseover', function() {
+                    this.style.background = 'linear-gradient(135deg, #005A8C 0%, #004B73 100%)';
+                    this.style.transform = 'translateY(-2px)';
+                    this.style.boxShadow = '0 4px 8px rgba(0, 124, 195, 0.3)';
+                });
+                
+                garminBtn.addEventListener('mouseout', function() {
+                    this.style.background = 'linear-gradient(135deg, #007CC3 0%, #005A8C 100%)';
+                    this.style.transform = 'translateY(0px)';
+                    this.style.boxShadow = '0 2px 4px rgba(0, 124, 195, 0.2)';
+                });
+            }
+            
+            console.log('🚀 Bouton Garmin Connect ajouté !');
+            
+        } else {
+            console.log('❌ Conteneur non trouvé - Tentative avec fallback');
+            
+            // Solution de fallback: bouton flottant
+            var fallbackHTML = `
+                <div id="garmin-fallback" style="
+                    position: fixed; 
+                    bottom: 20px; 
+                    right: 20px; 
+                    z-index: 1000;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    padding: 5px;
+                ">
+                    <a href="${garminUrl}" style="
+                        background: #007CC3;
+                        color: white;
+                        padding: 10px 16px;
+                        text-decoration: none;
+                        border-radius: 6px;
+                        font-weight: bold;
+                        font-size: 13px;
+                        display: flex;
+                        align-items: center;
+                    ">
+                        <svg width="16" height="16" fill="white" style="margin-right: 6px;">
+                            <circle cx="8" cy="3" r="1"/>
+                            <circle cx="3" cy="8" r="1"/>
+                            <circle cx="13" cy="8" r="1"/>
+                            <circle cx="8" cy="13" r="1"/>
+                            <circle cx="8" cy="8" r="1.5"/>
+                        </svg>
+                        Garmin Connect
+                    </a>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', fallbackHTML);
+            console.log('🎯 Bouton Garmin fallback ajouté');
+        }
+        
+    }, 150);
+}
+</script>
+
+<style>
+/* Styles responsive pour mobile */
+@media (max-width: 768px) {
+    .garmin-connect-btn {
+        width: 90% !important;
+        margin: 0 auto !important;
+    }
+    
+    #garmin-fallback {
+        bottom: 10px !important;
+        right: 10px !important;
+    }
+}
+</style>
+<!-- ENDIF -->

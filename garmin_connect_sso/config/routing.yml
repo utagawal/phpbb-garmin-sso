@@ -1,0 +1,3 @@
+utagawavtt_garmin_connect_sso_login:
+    path: /garmin/login
+    defaults: { _controller: utagawavtt.garmin_connect_sso.controller:login }

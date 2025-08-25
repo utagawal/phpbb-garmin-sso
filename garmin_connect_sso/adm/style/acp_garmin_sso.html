@@ -1,0 +1,43 @@
+<!-- INCLUDE overall_header.html -->
+
+<h1>Configuration Garmin Connect SSO</h1>
+
+<form id="acp_garmin_sso" method="post" action="{U_ACTION}">
+
+<fieldset>
+    <legend>Paramètres généraux</legend>
+    <dl>
+        <dt><label for="garmin_sso_enabled">Activer Garmin Connect SSO :</label><br />
+            <span>Permet aux utilisateurs de se connecter avec leurs identifiants Garmin Connect.</span>
+        </dt>
+        <dd>
+            <label><input type="radio" class="radio" name="garmin_sso_enabled" value="1"<!-- IF GARMIN_SSO_ENABLED --> checked="checked"<!-- ENDIF --> /> Oui</label>
+            <label><input type="radio" class="radio" name="garmin_sso_enabled" value="0"<!-- IF not GARMIN_SSO_ENABLED --> checked="checked"<!-- ENDIF --> /> Non</label>
+        </dd>
+    </dl>
+    <dl>
+        <dt><label for="garmin_auto_register">Création automatique de compte :</label><br />
+            <span>Créer automatiquement un compte forum si l'utilisateur Garmin Connect n'existe pas encore.</span>
+        </dt>
+        <dd>
+            <label><input type="radio" class="radio" name="garmin_auto_register" value="1"<!-- IF GARMIN_AUTO_REGISTER --> checked="checked"<!-- ENDIF --> /> Oui</label>
+            <label><input type="radio" class="radio" name="garmin_auto_register" value="0"<!-- IF not GARMIN_AUTO_REGISTER --> checked="checked"<!-- ENDIF --> /> Non</label>
+        </dd>
+    </dl>
+    <dl>
+        <dt><label for="garmin_email_domain">Domaine email par défaut :</label><br />
+            <span>Domaine utilisé pour générer les adresses email des nouveaux utilisateurs (ex: garmin.local).</span>
+        </dt>
+        <dd><input type="text" id="garmin_email_domain" name="garmin_email_domain" value="{GARMIN_EMAIL_DOMAIN}" /></dd>
+    </dl>
+</fieldset>
+
+<fieldset class="submit-buttons">
+    <input class="button1" type="submit" id="submit" name="submit" value="Envoyer" />&nbsp;
+    <input class="button2" type="reset" id="reset" name="reset" value="Réinitialiser" />
+</fieldset>
+
+{S_FORM_TOKEN}
+</form>
+
+<!-- INCLUDE overall_footer.html -->

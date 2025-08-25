@@ -1,0 +1,23 @@
+services:
+    utagawavtt.garmin_connect_sso.controller:
+        class: utagawavtt\garmin_connect_sso\controller\garmin_login
+        arguments:
+            - '@auth'
+            - '@config'
+            - '@dbal.conn'
+            - '@controller.helper'
+            - '@request'
+            - '@template'
+            - '@user'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+
+    utagawavtt.garmin_connect_sso.listener:
+        class: utagawavtt\garmin_connect_sso\event\main_listener
+        arguments:
+            - '@config'
+            - '@template'
+            - '@user'
+            - '@controller.helper'
+        tags:
+            - { name: event.listener }
