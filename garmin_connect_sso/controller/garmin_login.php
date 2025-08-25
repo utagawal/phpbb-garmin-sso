@@ -29,222 +29,72 @@ class garmin_login
         $this->php_ext = $php_ext;
     }
 
+    /**
+     * Initiates the Garmin OAuth 2.0 PKCE flow.
+     */
     public function login()
     {
         if (empty($this->config['garmin_sso_enabled'])) {
-            trigger_error('Extension Garmin Connect SSO désactivée');
+            trigger_error('GARMIN_SSO_DISABLED');
+        }
+
+        if (empty($this->config['garmin_sso_client_id'])) {
+            trigger_error('GARMIN_SSO_CLIENT_ID_NOT_CONFIGURED');
         }
 
         if ($this->user->data['is_registered']) {
-            redirect(append_sid(generate_board_url() . '/index.' . $this->php_ext));
+            redirect($this->helper->route('phpbb_index'));
         }
 
-        if ($this->request->is_set_post('garmin_login')) {
-            if (!check_form_key('garmin_login')) {
-                trigger_error('FORM_INVALID');
-            }
+        // 1. Generate and store code_verifier
+        $code_verifier = $this->generate_random_string(64);
+        $this->user->session->set('garmin_sso_code_verifier', $code_verifier);
 
-            $username = $this->request->variable('garmin_username', '', true);
-            $password = $this->request->variable('garmin_password', '', true);
+        // 2. Generate code_challenge
+        $code_challenge = $this->base64url_encode(hash('sha256', $code_verifier, true));
 
-            if ($username && $password) {
-                $result = $this->process_garmin_login($username, $password);
-                
-                if ($result['success']) {
-                    $this->login_user($result['user_data']);
-                    
-                    $redirect_url = $this->request->variable('redirect', generate_board_url() . '/index.' . $this->php_ext);
-                    redirect($redirect_url);
-                } else {
-                    $this->template->assign_var('GARMIN_ERROR', $result['error']);
-                }
-            } else {
-                $this->template->assign_var('GARMIN_ERROR', 'Veuillez saisir vos identifiants Garmin Connect');
-            }
-        }
+        // 3. Generate and store state
+        $state = $this->generate_random_string(32);
+        $this->user->session->set('garmin_sso_state', $state);
 
-        $this->template->assign_vars(array(
-            'S_GARMIN_LOGIN' => true,
-            'U_GARMIN_ACTION' => $this->helper->route('utagawavtt_garmin_connect_sso_login'),
-            'GARMIN_USERNAME' => $this->request->variable('garmin_username', '', true),
-            'S_FORM_TOKEN' => add_form_key('garmin_login'),
-            'U_BACK_LOGIN' => append_sid(generate_board_url() . '/ucp.' . $this->php_ext, 'mode=login'),
-        ));
+        // 4. Construct the authorization URL
+        $params = [
+            'response_type'         => 'code',
+            'client_id'             => $this->config['garmin_sso_client_id'],
+            'code_challenge'        => $code_challenge,
+            'code_challenge_method' => 'S256',
+            'redirect_uri'          => $this->helper->route('utagawavtt_garmin_connect_sso_callback', [], true),
+            'state'                 => $state,
+        ];
 
-        return $this->helper->render('garmin_login_form.html', 'Connexion Garmin Connect');
+        $auth_url = 'https://connect.garmin.com/oauth2Confirm?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+
+        // 5. Redirect user to Garmin
+        redirect($auth_url);
     }
 
-    private function process_garmin_login($username, $password)
+    /**
+     * Handles the callback from Garmin after user authorization.
+     */
+    public function handle_callback()
     {
-        $user_data = $this->get_user_data($username);
-        
-        if ($user_data) {
-            if ($this->authenticate_with_garmin($username, $password)) {
-                return array('success' => true, 'user_data' => $user_data);
-            } else {
-                return array('success' => false, 'error' => 'Identifiants Garmin Connect incorrects');
-            }
-        } else {
-            if ($this->config['garmin_auto_register']) {
-                if ($this->authenticate_with_garmin($username, $password)) {
-                    $garmin_user_data = $this->get_garmin_user_info($username);
-                    $user_id = $this->create_user_from_garmin($garmin_user_data);
-                    
-                    if ($user_id) {
-                        $user_data = $this->get_user_data($username);
-                        return array('success' => true, 'user_data' => $user_data);
-                    }
-                }
-                return array('success' => false, 'error' => 'Impossible de créer le compte avec ces identifiants Garmin');
-            } else {
-                return array('success' => false, 'error' => 'Aucun compte trouvé. La création automatique est désactivée.');
-            }
-        }
+        // This will be implemented in the next step.
+        trigger_error('Callback not yet implemented.');
     }
 
-    private function authenticate_with_garmin($username, $password)
+    /**
+     * Generates a cryptographically secure random string.
+     */
+    private function generate_random_string($length)
     {
-        $login_url = 'https://sso.garmin.com/sso/signin';
-        $auth_url = 'https://connect.garmin.com/signin/';
-        
-        try {
-            $ch = curl_init();
-            $cookie_file = sys_get_temp_dir() . '/garmin_cookies_' . md5($username . time()) . '.txt';
-            
-            curl_setopt_array($ch, array(
-                CURLOPT_COOKIEJAR => $cookie_file,
-                CURLOPT_COOKIEFILE => $cookie_file,
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT => 30,
-                CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; phpBB-Garmin-SSO)',
-            ));
-            
-            curl_setopt($ch, CURLOPT_URL, $auth_url);
-            $response = curl_exec($ch);
-            
-            if (curl_error($ch)) {
-                curl_close($ch);
-                @unlink($cookie_file);
-                return false;
-            }
-            
-            preg_match('/<input[^>]*name="_eventId"[^>]*value="([^"]*)">/i', $response, $matches);
-            $event_id = isset($matches[1]) ? $matches[1] : 'submit';
-            
-            preg_match('/<input[^>]*name="lt"[^>]*value="([^"]*)">/i', $response, $matches);
-            $lt = isset($matches[1]) ? $matches[1] : '';
-            
-            $post_data = http_build_query(array(
-                'username' => $username,
-                'password' => $password,
-                '_eventId' => $event_id,
-                'lt' => $lt,
-                'displayNameRequired' => 'false'
-            ));
-            
-            curl_setopt_array($ch, array(
-                CURLOPT_URL => $login_url,
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => $post_data,
-                CURLOPT_HEADER => true,
-            ));
-            
-            $login_response = curl_exec($ch);
-            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            
-            curl_close($ch);
-            @unlink($cookie_file);
-            
-            if ($http_code >= 200 && $http_code < 400) {
-                return (strpos($login_response, 'error') === false && 
-                        strpos($login_response, 'invalid') === false &&
-                        (strpos($login_response, 'Location:') !== false || strpos($login_response, 'connect.garmin.com') !== false));
-            }
-            
-            return false;
-            
-        } catch (Exception $e) {
-            error_log('Garmin SSO Error: ' . $e->getMessage());
-            return false;
-        }
+        return substr(str_replace(['+', '/', '='], '', base64_encode(random_bytes($length))), 0, $length);
     }
 
-    private function get_garmin_user_info($username)
+    /**
+     * Base64-URL encodes data.
+     */
+    private function base64url_encode($data)
     {
-        return array(
-            'username' => $username,
-            'email' => $this->generate_email($username),
-            'display_name' => $username,
-        );
-    }
-
-    private function generate_email($username)
-    {
-        $domain = !empty($this->config['garmin_email_domain']) ? $this->config['garmin_email_domain'] : 'garmin.local';
-        return $username . '@' . $domain;
-    }
-
-    private function create_user_from_garmin($garmin_data)
-    {
-        if (!function_exists('user_add')) {
-            include($this->phpbb_root_path . 'includes/functions_user.' . $this->php_ext);
-        }
-
-        $user_row = array(
-            'username' => $garmin_data['username'],
-            'user_password' => phpbb_hash('garmin_' . time()),
-            'user_email' => $garmin_data['email'],
-            'group_id' => $this->config['new_member_group_default'] ?: 2,
-            'user_timezone' => $this->config['board_timezone'],
-            'user_lang' => $this->config['default_lang'],
-            'user_type' => USER_NORMAL,
-            'user_actkey' => '',
-            'user_ip' => $this->user->ip,
-            'user_regdate' => time(),
-            'user_inactive_reason' => 0,
-            'user_inactive_time' => 0,
-        );
-
-        return user_add($user_row);
-    }
-
-    private function get_user_data($username)
-    {
-        $sql = 'SELECT * FROM ' . USERS_TABLE . "
-            WHERE username_clean = '" . $this->db->sql_escape(utf8_clean_string($username)) . "'";
-        $result = $this->db->sql_query($sql);
-        $row = $this->db->sql_fetchrow($result);
-        $this->db->sql_freeresult($result);
-
-        return $row;
-    }
-
-    private function login_user($user_data)
-    {
-        if (!function_exists('user_login')) {
-            include($this->phpbb_root_path . 'includes/functions_user.' . $this->php_ext);
-        }
-
-        // Connexion manuelle de l'utilisateur
-        $this->user->session_kill();
-        $this->user->session_begin();
-        
-        // Mise à jour des données utilisateur
-        $this->user->data = array_merge($this->user->data, $user_data);
-        $this->user->data['is_registered'] = true;
-        $this->user->data['is_bot'] = false;
-        
-        // Authentification
-        $this->auth->acl($this->user->data);
-        
-        // Mise à jour de la session
-        $sql = 'UPDATE ' . SESSIONS_TABLE . '
-            SET session_user_id = ' . (int) $user_data['user_id'] . '
-            WHERE session_id = "' . $this->db->sql_escape($this->user->session_id) . '"';
-        $this->db->sql_query($sql);
-
-        return true;
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 }
