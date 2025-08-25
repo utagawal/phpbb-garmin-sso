@@ -26,9 +26,26 @@
     </dl>
     <dl>
         <dt><label for="garmin_email_domain">Domaine email par défaut :</label><br />
-            <span>Domaine utilisé pour générer les adresses email des nouveaux utilisateurs (ex: garmin.local).</span>
+            <span>Domaine utilisé pour générer les adresses email des nouveaux utilisateurs (ex: garmin.local). Ce champ ne sera plus utilisé après la mise à jour vers OAuth, mais est conservé pour la compatibilité.</span>
         </dt>
         <dd><input type="text" id="garmin_email_domain" name="garmin_email_domain" value="{GARMIN_EMAIL_DOMAIN}" /></dd>
+    </dl>
+</fieldset>
+
+<fieldset>
+    <legend>Paramètres API Garmin OAuth 2.0</legend>
+    <p>Vous devez enregistrer votre application auprès de Garmin pour obtenir ces informations.</p>
+    <dl>
+        <dt><label for="garmin_sso_client_id">Client ID :</label><br />
+            <span>Votre Client ID fourni par Garmin.</span>
+        </dt>
+        <dd><input type="text" id="garmin_sso_client_id" name="garmin_sso_client_id" value="{GARMIN_SSO_CLIENT_ID}" size="45" /></dd>
+    </dl>
+    <dl>
+        <dt><label for="garmin_sso_client_secret">Client Secret :</label><br />
+            <span>Votre Client Secret fourni par Garmin. Ce champ est obligatoire.</span>
+        </dt>
+        <dd><input type="password" id="garmin_sso_client_secret" name="garmin_sso_client_secret" value="{GARMIN_SSO_CLIENT_SECRET_MASK}" size="45" /></dd>
     </dl>
 </fieldset>
 
