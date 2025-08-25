@@ -25,6 +25,8 @@ class install_config extends \phpbb\db\migration\migration
             array('config.add', array('garmin_sso_enabled', 1)),
             array('config.add', array('garmin_auto_register', 1)),
             array('config.add', array('garmin_email_domain', 'garmin.local')),
+            array('config.add', array('garmin_sso_client_id', '')),
+            array('config.add', array('garmin_sso_client_secret', '')),
         );
     }
 
@@ -35,6 +37,8 @@ class install_config extends \phpbb\db\migration\migration
             array('config.remove', array('garmin_sso_enabled')),
             array('config.remove', array('garmin_auto_register')),
             array('config.remove', array('garmin_email_domain')),
+            array('config.remove', array('garmin_sso_client_id')),
+            array('config.remove', array('garmin_sso_client_secret')),
         );
     }
 }
