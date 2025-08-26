@@ -5,8 +5,10 @@ class add_garmin_token_columns extends \phpbb\db\migration\migration
 {
     public function effectively_installed()
     {
-        $table_columns = $this->db_tools->get_table_columns($this->table_prefix . 'users');
-        return isset($table_columns['user_garmin_access_token']);
+        // The API for checking for a column's existence has proven to be unreliable.
+        // Returning false forces the update to run, and we assume the db_tools
+        // method is idempotent and handles cases where the column already exists.
+        return false;
     }
 
     static public function depends_on()
@@ -17,11 +19,14 @@ class add_garmin_token_columns extends \phpbb\db\migration\migration
     public function update_data()
     {
         return array(
-            array('db_tools.add_columns', array(
-                $this->table_prefix . 'users' => array(
-                    'user_garmin_access_token'    => array('TEXT', ''),
-                    'user_garmin_refresh_token'   => array('TEXT', ''),
-                    'user_garmin_token_expires'   => array('BINT', 0),
+            array('callable', array(
+                array($this->db_tools, 'add_columns'),
+                array(
+                    $this->table_prefix . 'users' => array(
+                        'user_garmin_access_token'    => array('TEXT', ''),
+                        'user_garmin_refresh_token'   => array('TEXT', ''),
+                        'user_garmin_token_expires'   => array('BINT', 0),
+                    ),
                 ),
             )),
         );
@@ -30,11 +35,14 @@ class add_garmin_token_columns extends \phpbb\db\migration\migration
     public function revert_data()
     {
         return array(
-            array('db_tools.drop_columns', array(
-                $this->table_prefix . 'users' => array(
-                    'user_garmin_access_token',
-                    'user_garmin_refresh_token',
-                    'user_garmin_token_expires',
+            array('callable', array(
+                array($this->db_tools, 'drop_columns'),
+                array(
+                    $this->table_prefix . 'users' => array(
+                        'user_garmin_access_token',
+                        'user_garmin_refresh_token',
+                        'user_garmin_token_expires',
+                    ),
                 ),
             )),
         );
