@@ -1,0 +1,75 @@
+
+<!-- INCLUDEJS {T_ASSETS_PATH}/javascript/garmin_sso.js -->
+<!-- IF S_GARMIN_SSO_ENABLED and not S_USER_LOGGED_IN -->
+<script>
+(function() {
+    // Attendre que le DOM soit prêt
+    function addGarminButton() {
+        // Vérifier si on est sur la page de connexion
+        if (window.location.href.indexOf('mode=login') === -1) {
+            return;
+        }
+        
+        // Éviter les doublons
+        if (document.getElementById('garmin-login-section')) {
+            return;
+        }
+        
+        // Trouver le formulaire de connexion
+        var loginSubmit = document.querySelector('input[name="login"]');
+        if (!loginSubmit) {
+            return;
+        }
+        
+        var form = loginSubmit.closest('form');
+        if (!form) {
+            return;
+        }
+        
+        // Créer l'URL de connexion Garmin
+        // Construction manuelle de l'URL pour éviter les problèmes de variables template
+        var baseUrl = window.location.origin + window.location.pathname.replace(/\/ucp\.php.*/, '');
+        var garminLoginUrl = baseUrl + '/app.php/garmin/login';
+        
+        // Si on a un paramètre redirect, le passer aussi
+        var urlParams = new URLSearchParams(window.location.search);
+        var redirect = urlParams.get('redirect');
+        if (redirect) {
+            garminLoginUrl += '?redirect=' + encodeURIComponent(redirect);
+        }
+        
+        // Créer le HTML du bouton Garmin
+        var garminSection = document.createElement('div');
+        garminSection.id = 'garmin-login-section';
+        garminSection.innerHTML = [
+            '<fieldset>',
+            '<dl>',
+            '<dt>&nbsp;</dt>',
+            '<dd style="text-align: center; padding: 20px 0; margin-top: 10px; border-top: 1px dashed #ccc;">',
+            '<p style="margin-bottom: 15px; color: #666; font-size: 1.1em;">Connexion rapide</p>',
+            '<a href="' + garminLoginUrl + '" class="button1" style="background: linear-gradient(135deg, #007CC3 0%, #005A8C 100%); border-color: #005A8C; padding: 8px 20px; display: inline-block; text-decoration: none; color: white; font-weight: bold;">',
+            '<span style="display: inline-block; vertical-align: middle; margin-right: 8px;">⚡</span>',
+            'Se connecter avec Garmin Connect',
+            '</a>',
+            '<p style="margin-top: 10px; color: #888; font-size: 0.9em;">Connexion sécurisée via votre compte Garmin</p>',
+            '</dd>',
+            '</dl>',
+            '</fieldset>'
+        ].join('');
+        
+        // Insérer après le formulaire
+        form.parentNode.insertBefore(garminSection, form.nextSibling);
+        
+        console.log('Bouton Garmin ajouté avec succès. URL:', garminLoginUrl);
+    }
+    
+    // Exécuter quand le DOM est prêt
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addGarminButton);
+    } else {
+        // DOM déjà chargé
+        setTimeout(addGarminButton, 100);
+    }
+})();
+</script>
+<!-- ENDIF -->
